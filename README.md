@@ -1,7 +1,7 @@
 
 # VS Code Twig Language 👋
 
-*this extension inherited from <https://github.com/mblode/vscode-twig-language-2>*
+*This extension is forked from <https://github.com/junstyle/vscode-twig-language>*
 
 ## Features
 
@@ -34,10 +34,6 @@
     "twig": "html"
 },
 ```
-
-## If you love this extension, you could
-
-[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" >](https://www.buymeacoffee.com/junstyle)
 
 ## Generic Triggers for snippets
 
