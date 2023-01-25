@@ -5,40 +5,25 @@ import * as djangoPlugin from 'prettier-plugin-django';
 
 export function formatting(document: TextDocument, diagnosticCollection?: DiagnosticCollection): string {
 	const options = {
-		"tabWidth": 2,
-		"printWidth": 5000,
-		"semi": false,
-		"singleQuote": true,
-		"trailingComma": "none",
+		tabWidth: 4,
+		printWidth: 5000,
+		semi: false,
+		singleQuote: true,
+		trailingComma: 'none',
 
-		"twigPrintWidth": 5000,
-		"twigMultiTags": [
-			"with,endwith"
-		],
-		"twigAlwaysBreakObjects": false,
-		"twigSingleQuote": true,
-		// "overrides": [
-		// 	{
-		// 		"files": [
-		// 			"*.django",
-		// 			document.uri.fsPath
-		// 		],
-		// 		"options": {
-		// 		}
-		// 	}
-		// ],
-		"parser": "melody",
-		// "plugins": [
-		// 	"D:/npm/global/node_modules/prettier-plugin-django"
-		// ]
-		"plugins": [],
-		"htmlWhitespaceSensitivity": "ignore",
-		"embeddedLanguageFormatting": 'auto',
+		twigPrintWidth: 5000,
+		twigMultiTags: ['with,endwith'],
+		twigAlwaysBreakObjects: false,
+		twigSingleQuote: true,
+		parser: 'melody',
+		plugins: [],
+		htmlWhitespaceSensitivity: 'ignore',
+		embeddedLanguageFormatting: 'auto',
 	};
 	Object.assign(options, resolveConfig.sync(document.uri.fsPath) ?? []);
 	options.twigSingleQuote = true;
 	options.plugins = [djangoPlugin];
-	options.parser = "melody";
+	options.parser = 'melody';
 	options.htmlWhitespaceSensitivity = 'ignore';
 	options.embeddedLanguageFormatting = 'off';
 
@@ -50,42 +35,50 @@ export function formatting(document: TextDocument, diagnosticCollection?: Diagno
 		}
 
 		//if use `prettier-plugin-django`, can't get the error tips, so don't use it
-		formatStyleAndScript(doc, options as Options)
-		diagnosticCollection?.clear()
+		formatStyleAndScript(doc, options as Options);
+		diagnosticCollection?.clear();
 	} catch (error) {
 		if (diagnosticCollection && error.loc) {
 			diagnosticCollection.clear();
-			const loc = error.loc
+			const loc = error.loc;
 			if (!loc.end) {
 				loc.end = { line: loc.start.line, column: loc.start.column + 1 };
 			}
-			let line = loc.start.line - 1, col = loc.start.column - 1;
-			let line2 = loc.end.line - 1, col2 = loc.end.column - 1;
+			let line = loc.start.line - 1,
+				col = loc.start.column - 1;
+			let line2 = loc.end.line - 1,
+				col2 = loc.end.column - 1;
 			let range = new Range(line, col, line2, col2);
-			setTimeout(() => diagnosticCollection.set(document.uri, [new Diagnostic(range, error.message.split(' \t ')[0].split('\n')[0], 0)]), 250);
+			setTimeout(
+				() =>
+					diagnosticCollection.set(document.uri, [
+						new Diagnostic(range, error.message.split(' \t ')[0].split('\n')[0], 0),
+					]),
+				250
+			);
 		} else {
-			console.log(error)
+			console.log(error);
 		}
 	}
 	return doc.text;
 }
 
 function formatStyleAndScript(doc: { text: string }, options: Options) {
-	let indent = '  '
+	let indent = '  ';
 	if (options.useTabs) {
-		indent = '\t'
+		indent = '\t';
 	} else {
 		if (options.tabWidth) {
-			indent = ' '.repeat(options.tabWidth)
+			indent = ' '.repeat(options.tabWidth);
 		}
 	}
 	let eol = doc.text.includes('\r\n') ? '\r\n' : '\n';
 
-	let result = htmlPlugin.parsers.html.parse(doc.text, null, {} as ParserOptions)
+	let result = htmlPlugin.parsers.html.parse(doc.text, null, {} as ParserOptions);
 	let incrChars = 0;
 	let incrLines = 0;
 	const doFormat = (root) => {
-		if (!root.children) return
+		if (!root.children) return;
 		for (let i = 0; i < root.children.length; i++) {
 			const node = root.children[i];
 			if (node.type == 'element' && (node.name == 'script' || node.name == 'style')) {
@@ -94,40 +87,57 @@ function formatStyleAndScript(doc: { text: string }, options: Options) {
 				}
 
 				if (node.prev && node.prev.value) {
-					let pv = node.prev.value.trim()
+					let pv = node.prev.value.trim();
 					if (pv.endsWith('{# prettier-ignore #}') || pv.endsWith('{% comment %}')) {
 						continue;
 					}
 				}
 
-				let child = node.children[0]
-				let ctext = child.value
+				let child = node.children[0];
+				let ctext = child.value;
 				if (ctext.trim()) {
-					options.parser = node.name == 'script' ? 'babel' : 'css'
+					options.parser = node.name == 'script' ? 'babel' : 'css';
 
 					let tagOffset = node.sourceSpan.start.offset;
 					let tagOffset2 = tagOffset;
 					while (tagOffset2 > -1) {
-						if (doc.text[tagOffset2 + incrChars] == "\n") {
+						if (doc.text[tagOffset2 + incrChars] == '\n') {
 							break;
 						}
 						tagOffset2--;
 					}
-					let tagIndent = doc.text.slice(tagOffset2 + 1 + incrChars, tagOffset + incrChars).replace(/\S/g, ' ');
+					let tagIndent = doc.text
+						.slice(tagOffset2 + 1 + incrChars, tagOffset + incrChars)
+						.replace(/\S/g, ' ');
 
-					ctext = '\n'.repeat(child.sourceSpan.start.line + incrLines) + ' '.repeat(child.sourceSpan.start.col) + child.value; //keep the line and column for error tips
-					ctext = eol + format(ctext, options).trim().split(eol).map(line => tagIndent + indent + line).join(eol) + eol + tagIndent;
+					ctext =
+						'\n'.repeat(child.sourceSpan.start.line + incrLines) +
+						' '.repeat(child.sourceSpan.start.col) +
+						child.value; //keep the line and column for error tips
+					ctext =
+						eol +
+						format(ctext, options)
+							.trim()
+							.split(eol)
+							.map((line) => tagIndent + indent + line)
+							.join(eol) +
+						eol +
+						tagIndent;
 				} else {
-					ctext = ''
+					ctext = '';
 				}
 				const start = child.sourceSpan.start.offset;
-				doc.text = doc.text.slice(0, start + incrChars) + ctext + doc.text.slice(start + child.value.length + incrChars);
+
+				doc.text =
+					doc.text.slice(0, start + incrChars) +
+					ctext +
+					doc.text.slice(start + child.value.length + incrChars);
 				incrChars += ctext.length - child.value.length;
 				incrLines += ctext.split('\n').length - child.value.split('\n').length;
 			} else {
-				doFormat(node)
+				doFormat(node);
 			}
 		}
-	}
+	};
 	doFormat(result);
 }
