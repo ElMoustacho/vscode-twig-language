@@ -6,13 +6,13 @@
 			"es2020"
 		],
 		"outDir": "out",
-		"sourceMap": true,
+		"sourceMap": false,
 		"resolveJsonModule": true,
-		"esModuleInterop": true
+		"rootDir": "src",
+		"strict": true
 	},
 	"include": [
 		"src",
-		"tsconfig.json",
 		"hover"
 	],
 	"exclude": [
