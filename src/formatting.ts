@@ -4,7 +4,7 @@ import * as htmlPlugin from 'prettier/parser-html';
 import * as djangoPlugin from 'prettier-plugin-django';
 
 export function formatting(document: TextDocument, diagnosticCollection?: DiagnosticCollection): string {
-	const options = {
+	const defaultOptions = {
 		tabWidth: 4,
 		printWidth: 5000,
 		semi: false,
@@ -20,22 +20,22 @@ export function formatting(document: TextDocument, diagnosticCollection?: Diagno
 		htmlWhitespaceSensitivity: 'ignore',
 		embeddedLanguageFormatting: 'auto',
 	};
-	Object.assign(options, resolveConfig.sync(document.uri.fsPath) ?? []);
-	options.twigSingleQuote = true;
-	options.plugins = [djangoPlugin];
-	options.parser = 'melody';
-	options.htmlWhitespaceSensitivity = 'ignore';
-	options.embeddedLanguageFormatting = 'off';
+	Object.assign(defaultOptions, resolveConfig.sync(document.uri.fsPath) ?? []);
+	defaultOptions.twigSingleQuote = true;
+	defaultOptions.plugins = [djangoPlugin];
+	defaultOptions.parser = 'melody';
+	defaultOptions.htmlWhitespaceSensitivity = 'ignore';
+	defaultOptions.embeddedLanguageFormatting = 'off';
 
 	const doc = { text: document.getText() };
 	try {
-		doc.text = format(doc.text, options as Options);
+		doc.text = format(doc.text, defaultOptions as Options);
 		if (!doc.text) {
 			throw new Error('django-html: formatting failed');
 		}
 
 		//if use `prettier-plugin-django`, can't get the error tips, so don't use it
-		formatStyleAndScript(doc, options as Options);
+		formatStyleAndScript(doc, defaultOptions as Options);
 		diagnosticCollection?.clear();
 	} catch (error) {
 		if (diagnosticCollection && error.loc) {
@@ -44,11 +44,11 @@ export function formatting(document: TextDocument, diagnosticCollection?: Diagno
 			if (!loc.end) {
 				loc.end = { line: loc.start.line, column: loc.start.column + 1 };
 			}
-			let line = loc.start.line - 1,
+			const line = loc.start.line - 1,
 				col = loc.start.column - 1;
-			let line2 = loc.end.line - 1,
+			const line2 = loc.end.line - 1,
 				col2 = loc.end.column - 1;
-			let range = new Range(line, col, line2, col2);
+			const range = new Range(line, col, line2, col2);
 			setTimeout(
 				() =>
 					diagnosticCollection.set(document.uri, [
@@ -72,9 +72,9 @@ function formatStyleAndScript(doc: { text: string }, options: Options) {
 			indent = ' '.repeat(options.tabWidth);
 		}
 	}
-	let eol = doc.text.includes('\r\n') ? '\r\n' : '\n';
+	const eol = doc.text.includes('\r\n') ? '\r\n' : '\n';
 
-	let result = htmlPlugin.parsers.html.parse(doc.text, null, {} as ParserOptions);
+	const result = htmlPlugin.parsers.html.parse(doc.text, null, {} as ParserOptions);
 	let incrChars = 0;
 	let incrLines = 0;
 	const doFormat = (root) => {
@@ -87,18 +87,18 @@ function formatStyleAndScript(doc: { text: string }, options: Options) {
 				}
 
 				if (node.prev && node.prev.value) {
-					let pv = node.prev.value.trim();
+					const pv = node.prev.value.trim();
 					if (pv.endsWith('{# prettier-ignore #}') || pv.endsWith('{% comment %}')) {
 						continue;
 					}
 				}
 
-				let child = node.children[0];
+				const child = node.children[0];
 				let ctext = child.value;
 				if (ctext.trim()) {
 					options.parser = node.name == 'script' ? 'babel' : 'css';
 
-					let tagOffset = node.sourceSpan.start.offset;
+					const tagOffset = node.sourceSpan.start.offset;
 					let tagOffset2 = tagOffset;
 					while (tagOffset2 > -1) {
 						if (doc.text[tagOffset2 + incrChars] == '\n') {
@@ -106,7 +106,7 @@ function formatStyleAndScript(doc: { text: string }, options: Options) {
 						}
 						tagOffset2--;
 					}
-					let tagIndent = doc.text
+					const tagIndent = doc.text
 						.slice(tagOffset2 + 1 + incrChars, tagOffset + incrChars)
 						.replace(/\S/g, ' ');
 

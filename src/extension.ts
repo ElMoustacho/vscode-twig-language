@@ -1,11 +1,21 @@
 import { commands, ExtensionContext, languages, TextEdit, Range, window, Hover } from 'vscode';
-import snippetsArr from './hover/filters.json';
-import functionsArr from './hover/functions.json';
-import twigArr from './hover/twig.json';
+import * as filtersArr from './hover/filters.json';
+import * as functionsArr from './hover/functions.json';
+import * as twigArr from './hover/twig.json';
 import { formatting } from './formatting';
 import { clearVirtualDocumentContents, createVirtualDoc, registerTextDocumentEvents } from './virtualDocument';
 
-function createHover(snippet, type) {
+type HoverSnippet = {
+	example?: string;
+	description?: string;
+	prefix?: string;
+	body?: string | string[];
+	text?: string;
+};
+
+type HoverSnippetObj = { [key: string]: HoverSnippet };
+
+function createHover(snippet: HoverSnippet, type: string) {
 	const example = typeof snippet.example == 'undefined' ? '' : snippet.example;
 	const description = typeof snippet.description == 'undefined' ? '' : snippet.description;
 	return new Hover({
@@ -24,28 +34,28 @@ export function activate(context: ExtensionContext) {
 	const diagnosticCollection = languages.createDiagnosticCollection('twig');
 	context.subscriptions.push(diagnosticCollection);
 
-	function registerDocType(type) {
+	function registerDocType(type: string) {
 		context.subscriptions.push(
 			languages.registerHoverProvider(type, {
 				async provideHover(document, position) {
 					const range = document.getWordRangeAtPosition(position);
 					const word = document.getText(range);
 
-					for (const snippet in snippetsArr) {
-						if (snippetsArr[snippet].prefix == word || snippetsArr[snippet].hover == word) {
-							return createHover(snippetsArr[snippet], type);
+					for (const filter of Object.values(filtersArr as HoverSnippetObj)) {
+						if ('prefix' in filter && filter.prefix == word) {
+							return createHover(filter, type);
 						}
 					}
 
-					for (const func in functionsArr) {
-						if (functionsArr[func].prefix == word || functionsArr[func].hover == word) {
-							return createHover(functionsArr[func], type);
+					for (const func of Object.values(functionsArr as HoverSnippetObj)) {
+						if ('prefix' in func && func.prefix == word) {
+							return createHover(func, type);
 						}
 					}
 
-					for (const keyword in twigArr) {
-						if (twigArr[keyword].prefix == word || twigArr[keyword].hover == word) {
-							return createHover(twigArr[keyword], type);
+					for (const keyword of Object.values(twigArr as HoverSnippetObj)) {
+						if ('prefix' in keyword && keyword.prefix == word) {
+							return createHover(keyword, type);
 						}
 					}
 
@@ -58,12 +68,12 @@ export function activate(context: ExtensionContext) {
 
 		context.subscriptions.push(
 			languages.registerDocumentFormattingEditProvider(type, {
-				provideDocumentFormattingEdits: async (document, options, token) => {
+				provideDocumentFormattingEdits: async (document, _options, _token) => {
 					const otext = document.getText();
 					if (!otext) {
 						return;
 					}
-					let newDoc = document;
+					const newDoc = document;
 
 					const text = formatting(newDoc, diagnosticCollection);
 
