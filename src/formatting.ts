@@ -1,46 +1,67 @@
 import { format, Options, ParserOptions, resolveConfig } from 'prettier';
 import { Diagnostic, DiagnosticCollection, Range, TextDocument } from 'vscode';
 import * as htmlPlugin from 'prettier/parser-html';
-import * as djangoPlugin from 'prettier-plugin-django';
+
+type ExtendedOptions = Options &
+	Partial<{
+		twigMelodyPlugins: string[];
+		twigMultiTags: string[];
+		twigSingleQuote: boolean;
+		twigAlwaysBreakObjects: boolean;
+		twigPrintWidth: number;
+		twigFollowOfficialCodingStandards: boolean;
+		twigOutputEndblockName: boolean;
+	}>;
+
+type FormattingError = Error & {
+	loc: {
+		start: {
+			line: number;
+			column: number;
+		};
+		end: {
+			line: number;
+			column: number;
+		};
+	};
+};
 
 export function formatting(document: TextDocument, diagnosticCollection?: DiagnosticCollection): string {
-	const defaultOptions = {
+	const options: ExtendedOptions = {
 		tabWidth: 4,
+		useTabs: true,
 		printWidth: 5000,
-		semi: false,
+		semi: true,
 		singleQuote: true,
-		trailingComma: 'none',
+		trailingComma: 'es5',
 
 		twigPrintWidth: 5000,
 		twigMultiTags: ['with,endwith'],
 		twigAlwaysBreakObjects: false,
 		twigSingleQuote: true,
 		parser: 'melody',
-		plugins: [],
 		htmlWhitespaceSensitivity: 'ignore',
 		embeddedLanguageFormatting: 'auto',
 	};
-	Object.assign(defaultOptions, resolveConfig.sync(document.uri.fsPath) ?? []);
-	defaultOptions.twigSingleQuote = true;
-	defaultOptions.plugins = [djangoPlugin];
-	defaultOptions.parser = 'melody';
-	defaultOptions.htmlWhitespaceSensitivity = 'ignore';
-	defaultOptions.embeddedLanguageFormatting = 'off';
+
+	Object.assign(options, resolveConfig.sync(document.uri.fsPath) ?? []);
 
 	const doc = { text: document.getText() };
 	try {
-		doc.text = format(doc.text, defaultOptions as Options);
+		doc.text = format(doc.text, options);
+
 		if (!doc.text) {
-			throw new Error('django-html: formatting failed');
+			throw new Error('this fucking shit of formatting failed again 💩');
 		}
 
-		//if use `prettier-plugin-django`, can't get the error tips, so don't use it
-		formatStyleAndScript(doc, defaultOptions as Options);
+		formatStyleAndScript(doc, options);
 		diagnosticCollection?.clear();
 	} catch (error) {
-		if (diagnosticCollection && error.loc) {
+		const e = error as FormattingError;
+
+		if (diagnosticCollection && e.loc) {
 			diagnosticCollection.clear();
-			const loc = error.loc;
+			const loc = e.loc;
 			if (!loc.end) {
 				loc.end = { line: loc.start.line, column: loc.start.column + 1 };
 			}
@@ -52,17 +73,19 @@ export function formatting(document: TextDocument, diagnosticCollection?: Diagno
 			setTimeout(
 				() =>
 					diagnosticCollection.set(document.uri, [
-						new Diagnostic(range, error.message.split(' \t ')[0].split('\n')[0], 0),
+						new Diagnostic(range, e.message.split(' \t ')[0].split('\n')[0], 0),
 					]),
 				250
 			);
 		} else {
-			console.log(error);
+			console.warn(`An error occured during formatting: ${e.message}`);
 		}
 	}
+
 	return doc.text;
 }
 
+// Formats the <style> and <script> tags using their respective parsers
 function formatStyleAndScript(doc: { text: string }, options: Options) {
 	let indent = '  ';
 	if (options.useTabs) {
@@ -74,13 +97,14 @@ function formatStyleAndScript(doc: { text: string }, options: Options) {
 	}
 	const eol = doc.text.includes('\r\n') ? '\r\n' : '\n';
 
-	const result = htmlPlugin.parsers.html.parse(doc.text, null, {} as ParserOptions);
+	const result = htmlPlugin.parsers.html.parse(doc.text, {}, {} as ParserOptions);
 	let incrChars = 0;
 	let incrLines = 0;
+
 	const doFormat = (root) => {
 		if (!root.children) return;
-		for (let i = 0; i < root.children.length; i++) {
-			const node = root.children[i];
+		for (const element of root.children) {
+			const node = element;
 			if (node.type == 'element' && (node.name == 'script' || node.name == 'style')) {
 				if (node.children.length == 0) {
 					continue;

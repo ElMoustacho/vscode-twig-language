@@ -1,4 +1,4 @@
-import { commands, ExtensionContext, languages, TextEdit, Range, window, Hover } from 'vscode';
+import { commands, ExtensionContext, languages, TextEdit, Range, window, Hover, DiagnosticCollection } from 'vscode';
 import * as filtersArr from './hover/filters.json';
 import * as functionsArr from './hover/functions.json';
 import * as twigArr from './hover/twig.json';
@@ -24,93 +24,93 @@ function createHover(snippet: HoverSnippet, type: string) {
 	});
 }
 
+function registerDocType(type: string, context: ExtensionContext, diagnosticCollection: DiagnosticCollection) {
+	context.subscriptions.push(
+		languages.registerHoverProvider(type, {
+			async provideHover(document, position) {
+				const range = document.getWordRangeAtPosition(position);
+				const word = document.getText(range);
+
+				for (const filter of Object.values(filtersArr as HoverSnippetObj)) {
+					if ('prefix' in filter && filter.prefix == word) {
+						return createHover(filter, type);
+					}
+				}
+
+				for (const func of Object.values(functionsArr as HoverSnippetObj)) {
+					if ('prefix' in func && func.prefix == word) {
+						return createHover(func, type);
+					}
+				}
+
+				for (const keyword of Object.values(twigArr as HoverSnippetObj)) {
+					if ('prefix' in keyword && keyword.prefix == word) {
+						return createHover(keyword, type);
+					}
+				}
+
+				const vdocUri = createVirtualDoc(document);
+				const hs: Hover[] = await commands.executeCommand('vscode.executeHoverProvider', vdocUri, position);
+				return hs?.[0];
+			},
+		})
+	);
+
+	context.subscriptions.push(
+		languages.registerDocumentFormattingEditProvider(type, {
+			provideDocumentFormattingEdits: async (document, _options, _token) => {
+				const otext = document.getText();
+				if (!otext) {
+					return;
+				}
+				const newDoc = document;
+
+				const text = formatting(newDoc, diagnosticCollection);
+
+				if (text && text != otext) {
+					const range = new Range(document.positionAt(0), document.positionAt(otext.length));
+					return [new TextEdit(range, text)];
+				} else {
+					return [];
+				}
+			},
+		})
+	);
+
+	context.subscriptions.push(
+		languages.registerCompletionItemProvider(
+			type,
+			{
+				provideCompletionItems: async (document, position, _token, context) => {
+					const vdocUri = createVirtualDoc(document);
+					return await commands.executeCommand(
+						'vscode.executeCompletionItemProvider',
+						vdocUri,
+						position,
+						context.triggerCharacter
+					);
+				},
+			},
+			'.',
+			'(',
+			':',
+			'<'
+		)
+	);
+}
+
 export function activate(context: ExtensionContext) {
 	const active = window.activeTextEditor;
 	if (!active || !active.document) return;
 
-	registerDocType('twig');
-	registerTextDocumentEvents(context, ['twig']);
-
 	const diagnosticCollection = languages.createDiagnosticCollection('twig');
 	context.subscriptions.push(diagnosticCollection);
 
-	function registerDocType(type: string) {
-		context.subscriptions.push(
-			languages.registerHoverProvider(type, {
-				async provideHover(document, position) {
-					const range = document.getWordRangeAtPosition(position);
-					const word = document.getText(range);
-
-					for (const filter of Object.values(filtersArr as HoverSnippetObj)) {
-						if ('prefix' in filter && filter.prefix == word) {
-							return createHover(filter, type);
-						}
-					}
-
-					for (const func of Object.values(functionsArr as HoverSnippetObj)) {
-						if ('prefix' in func && func.prefix == word) {
-							return createHover(func, type);
-						}
-					}
-
-					for (const keyword of Object.values(twigArr as HoverSnippetObj)) {
-						if ('prefix' in keyword && keyword.prefix == word) {
-							return createHover(keyword, type);
-						}
-					}
-
-					const vdocUri = createVirtualDoc(document);
-					const hs = await commands.executeCommand('vscode.executeHoverProvider', vdocUri, position);
-					return hs?.[0];
-				},
-			})
-		);
-
-		context.subscriptions.push(
-			languages.registerDocumentFormattingEditProvider(type, {
-				provideDocumentFormattingEdits: async (document, _options, _token) => {
-					const otext = document.getText();
-					if (!otext) {
-						return;
-					}
-					const newDoc = document;
-
-					const text = formatting(newDoc, diagnosticCollection);
-
-					if (text && text != otext) {
-						const range = new Range(document.positionAt(0), document.positionAt(otext.length));
-						return [new TextEdit(range, text)];
-					} else {
-						return [];
-					}
-				},
-			})
-		);
-
-		context.subscriptions.push(
-			languages.registerCompletionItemProvider(
-				type,
-				{
-					provideCompletionItems: async (document, position, token, context) => {
-						const vdocUri = createVirtualDoc(document);
-						return await commands.executeCommand(
-							'vscode.executeCompletionItemProvider',
-							vdocUri,
-							position,
-							context.triggerCharacter
-						);
-					},
-				},
-				'.',
-				'(',
-				':',
-				'<'
-			)
-		);
-	}
+	registerDocType('twig', context, diagnosticCollection);
+	registerTextDocumentEvents(context, ['twig']);
 }
 
-export const deactivate = function () {
+export function deactivate() {
 	clearVirtualDocumentContents();
 	return undefined;
-};
+}
