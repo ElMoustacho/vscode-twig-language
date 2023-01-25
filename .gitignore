@@ -30,3 +30,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 package-lock.json
+
+# Remove output files from version control
+out/
