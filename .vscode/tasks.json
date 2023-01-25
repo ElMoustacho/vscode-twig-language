@@ -4,7 +4,10 @@
 		{
 			"type": "npm",
 			"script": "watch",
-			"group": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
 			"problemMatcher": "$esbuild-watch",
 			"isBackground": true,
 			"label": "npm: watch"

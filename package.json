@@ -15,13 +15,13 @@
 			"name": "ElMoustacho"
 		}
 	],
-	"homepage": "https://github.com/junstyle/vscode-twig-language",
+	"homepage": "https://github.com/ElMoustacho/vscode-twig-language",
 	"bugs": {
-		"url": "https://github.com/junstyle/vscode-twig-language/issues"
+		"url": "https://github.com/ElMoustacho/vscode-twig-language/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/junstyle/vscode-twig-language.git"
+		"url": "https://github.com/ElMoustacho/vscode-twig-language.git"
 	},
 	"icon": "images/icon.png",
 	"engines": {
