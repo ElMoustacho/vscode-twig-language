@@ -1,5 +1,5 @@
 import { format, Options, ParserOptions, resolveConfig } from 'prettier';
-import { Diagnostic, DiagnosticCollection, Range, TextDocument } from 'vscode';
+import { Diagnostic, DiagnosticCollection, Range, TextDocument, workspace } from 'vscode';
 import * as htmlPlugin from 'prettier/parser-html';
 
 type ExtendedOptions = Options &
@@ -44,7 +44,10 @@ export function formatting(document: TextDocument, diagnosticCollection?: Diagno
 		embeddedLanguageFormatting: 'auto',
 	};
 
-	Object.assign(options, resolveConfig.sync(document.uri.fsPath) ?? []);
+	const userOptions = workspace.getConfiguration('prettier', document.uri);
+
+	Object.assign(options, userOptions);
+	Object.assign(options, resolveConfig.sync(document.uri.fsPath, { useCache: false }) ?? []);
 
 	const doc = { text: document.getText() };
 	try {
