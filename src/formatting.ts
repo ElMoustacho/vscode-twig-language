@@ -152,10 +152,10 @@ export function formatting(document: vscode.TextDocument, diagnosticCollection?:
 		embeddedLanguageFormatting: 'auto',
 	};
 
-	const userOptions = workspace.getConfiguration('prettier', document.uri);
+	const userOptions = vscode.workspace.getConfiguration('prettier', document.uri);
 
 	Object.assign(options, userOptions);
-	Object.assign(options, resolveConfig.sync(document.uri.fsPath, { useCache: false }) ?? []);
+	Object.assign(options, prettier.resolveConfig.sync(document.uri.fsPath, { useCache: false }) ?? []);
 
 	const doc = { text: document.getText() };
 	try {
