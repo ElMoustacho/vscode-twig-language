@@ -53,7 +53,7 @@ export function createVirtualDoc(document: ITextDocument, languageId?: string) {
 	// const vdocUriString = `dj-embedded-content://django-html/${encodeURIComponent(originalUri)}.html`;
 	let path: string;
 	if (virtualDocumentPaths.has(originalUri)) {
-		path = virtualDocumentPaths.get(originalUri);
+		path = virtualDocumentPaths.get(originalUri) as string;
 	} else {
 		path = `/${encodeURIComponent(originalUri)}/${Math.random()}.${languageId}`;
 		virtualDocumentPaths.set(originalUri, path);

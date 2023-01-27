@@ -18,6 +18,7 @@ type HoverSnippetObj = { [key: string]: HoverSnippet };
 function createHover(snippet: HoverSnippet, type: string) {
 	const example = typeof snippet.example == 'undefined' ? '' : snippet.example;
 	const description = typeof snippet.description == 'undefined' ? '' : snippet.description;
+
 	return new Hover({
 		language: type,
 		value: description + '\n\n' + example,
@@ -49,7 +50,7 @@ function registerDocType(type: string, context: ExtensionContext, diagnosticColl
 					}
 				}
 
-				const vdocUri = createVirtualDoc(document);
+				const vdocUri = createVirtualDoc(document, type);
 				const hs: Hover[] = await commands.executeCommand('vscode.executeHoverProvider', vdocUri, position);
 				return hs?.[0];
 			},
@@ -82,7 +83,7 @@ function registerDocType(type: string, context: ExtensionContext, diagnosticColl
 			type,
 			{
 				provideCompletionItems: async (document, position, _token, context) => {
-					const vdocUri = createVirtualDoc(document);
+					const vdocUri = createVirtualDoc(document, type);
 					return await commands.executeCommand(
 						'vscode.executeCompletionItemProvider',
 						vdocUri,

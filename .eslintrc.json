@@ -27,8 +27,8 @@
 		"no-unreachable": "warn",
 		"constructor-super": "warn",
 		"valid-typeof": "warn",
-		"@typescript-eslint/no-unused-vars": "off",
-		"no-unused-vars": [
+		"no-unused-vars": "off",
+		"@typescript-eslint/no-unused-vars": [
 			"warn",
 			{
 				"argsIgnorePattern": "^_",
