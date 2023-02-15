@@ -43,9 +43,6 @@
 		"craft",
 		"beautify"
 	],
-	"activationEvents": [
-		"onLanguage:twig"
-	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"languages": [
