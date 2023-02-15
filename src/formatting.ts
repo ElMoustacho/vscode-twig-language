@@ -71,7 +71,7 @@ function formatIndentation(
 			.format(ctext, options)
 			.trim()
 			.split(eol)
-			.map((line) => tagIndent + indent + line)
+			.map(line => tagIndent + indent + line)
 			.join(eol) +
 		eol +
 		tagIndent;
@@ -134,6 +134,34 @@ function formatStyleAndScript(doc: { text: string }, options: prettier.Options) 
 	doFormat(result);
 }
 
+function handleFormattingError(
+	e: FormattingError,
+	document: vscode.TextDocument,
+	diagnosticCollection?: vscode.DiagnosticCollection
+) {
+	if (diagnosticCollection && e.loc) {
+		diagnosticCollection.clear();
+		const loc = e.loc;
+		if (!loc.end) {
+			loc.end = { line: loc.start.line, column: loc.start.column + 1 };
+		}
+		const line = loc.start.line - 1,
+			col = loc.start.column - 1;
+		const line2 = loc.end.line - 1,
+			col2 = loc.end.column - 1;
+		const range = new vscode.Range(line, col, line2, col2);
+		setTimeout(
+			() =>
+				diagnosticCollection.set(document.uri, [
+					new vscode.Diagnostic(range, e.message.split(' \t ')[0].split('\n')[0], 0),
+				]),
+			250
+		);
+	} else {
+		console.warn(`An error occured during formatting: ${e.message}`);
+	}
+}
+
 export function formatting(document: vscode.TextDocument, diagnosticCollection?: vscode.DiagnosticCollection): string {
 	const options: ExtendedOptions = {
 		tabWidth: 4,
@@ -170,27 +198,7 @@ export function formatting(document: vscode.TextDocument, diagnosticCollection?:
 	} catch (error) {
 		const e = error as FormattingError;
 
-		if (diagnosticCollection && e.loc) {
-			diagnosticCollection.clear();
-			const loc = e.loc;
-			if (!loc.end) {
-				loc.end = { line: loc.start.line, column: loc.start.column + 1 };
-			}
-			const line = loc.start.line - 1,
-				col = loc.start.column - 1;
-			const line2 = loc.end.line - 1,
-				col2 = loc.end.column - 1;
-			const range = new vscode.Range(line, col, line2, col2);
-			setTimeout(
-				() =>
-					diagnosticCollection.set(document.uri, [
-						new vscode.Diagnostic(range, e.message.split(' \t ')[0].split('\n')[0], 0),
-					]),
-				250
-			);
-		} else {
-			console.warn(`An error occured during formatting: ${e.message}`);
-		}
+		handleFormattingError(e, document, diagnosticCollection);
 	}
 
 	return doc.text;

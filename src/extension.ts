@@ -1,4 +1,4 @@
-import { commands, ExtensionContext, languages, TextEdit, Range, window, Hover, DiagnosticCollection } from 'vscode';
+import * as vscode from 'vscode';
 import * as filtersArr from './hover/filters.json';
 import * as functionsArr from './hover/functions.json';
 import * as twigArr from './hover/twig.json';
@@ -19,15 +19,19 @@ function createHover(snippet: HoverSnippet, type: string) {
 	const example = typeof snippet.example == 'undefined' ? '' : snippet.example;
 	const description = typeof snippet.description == 'undefined' ? '' : snippet.description;
 
-	return new Hover({
+	return new vscode.Hover({
 		language: type,
 		value: description + '\n\n' + example,
 	});
 }
 
-function registerDocType(type: string, context: ExtensionContext, diagnosticCollection: DiagnosticCollection) {
+function registerDocType(
+	type: string,
+	context: vscode.ExtensionContext,
+	diagnosticCollection: vscode.DiagnosticCollection
+) {
 	context.subscriptions.push(
-		languages.registerHoverProvider(type, {
+		vscode.languages.registerHoverProvider(type, {
 			async provideHover(document, position) {
 				const range = document.getWordRangeAtPosition(position);
 				const word = document.getText(range);
@@ -51,14 +55,18 @@ function registerDocType(type: string, context: ExtensionContext, diagnosticColl
 				}
 
 				const vdocUri = createVirtualDoc(document, type);
-				const hs: Hover[] = await commands.executeCommand('vscode.executeHoverProvider', vdocUri, position);
+				const hs: vscode.Hover[] = await vscode.commands.executeCommand(
+					'vscode.executeHoverProvider',
+					vdocUri,
+					position
+				);
 				return hs?.[0];
 			},
 		})
 	);
 
 	context.subscriptions.push(
-		languages.registerDocumentFormattingEditProvider(type, {
+		vscode.languages.registerDocumentFormattingEditProvider(type, {
 			provideDocumentFormattingEdits: async (document, _options, _token) => {
 				const otext = document.getText();
 				if (!otext) {
@@ -69,8 +77,8 @@ function registerDocType(type: string, context: ExtensionContext, diagnosticColl
 				const text = formatting(newDoc, diagnosticCollection);
 
 				if (text && text != otext) {
-					const range = new Range(document.positionAt(0), document.positionAt(otext.length));
-					return [new TextEdit(range, text)];
+					const range = new vscode.Range(document.positionAt(0), document.positionAt(otext.length));
+					return [new vscode.TextEdit(range, text)];
 				} else {
 					return [];
 				}
@@ -79,12 +87,12 @@ function registerDocType(type: string, context: ExtensionContext, diagnosticColl
 	);
 
 	context.subscriptions.push(
-		languages.registerCompletionItemProvider(
+		vscode.languages.registerCompletionItemProvider(
 			type,
 			{
 				provideCompletionItems: async (document, position, _token, context) => {
 					const vdocUri = createVirtualDoc(document, type);
-					return await commands.executeCommand(
+					return await vscode.commands.executeCommand(
 						'vscode.executeCompletionItemProvider',
 						vdocUri,
 						position,
@@ -100,11 +108,11 @@ function registerDocType(type: string, context: ExtensionContext, diagnosticColl
 	);
 }
 
-export function activate(context: ExtensionContext) {
-	const active = window.activeTextEditor;
+export function activate(context: vscode.ExtensionContext) {
+	const active = vscode.window.activeTextEditor;
 	if (!active || !active.document) return;
 
-	const diagnosticCollection = languages.createDiagnosticCollection('twig');
+	const diagnosticCollection = vscode.languages.createDiagnosticCollection('twig');
 	context.subscriptions.push(diagnosticCollection);
 
 	registerDocType('twig', context, diagnosticCollection);
